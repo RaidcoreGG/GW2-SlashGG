@@ -46,10 +46,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)$(Platform)\</IntDir>
+    <TargetName>slashgg</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)$(Platform)\</IntDir>
+    <TargetName>slashgg</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
