@@ -2,7 +2,7 @@
 [![](https://raidcore.gg/Resources/Images/Patreon.png)](https://www.patreon.com/bePatron?u=46163080)
 
 ![](https://img.shields.io/github/license/RaidcoreGG/GW2-SlashGG?style=for-the-badge&labelColor=%23131519&color=%230F79AA)
-![](https://img.shields.io/github/v/release/RaidcoreGG/MGW2-SlashGG?style=for-the-badge&labelColor=%23131519&color=%230F79AA)
+![](https://img.shields.io/github/v/release/RaidcoreGG/GW2-SlashGG?style=for-the-badge&labelColor=%23131519&color=%230F79AA)
 ![](https://img.shields.io/github/downloads/RaidcoreGG/GW2-SlashGG/total?style=for-the-badge&labelColor=%23131519&color=%230F79AA)
 
 # GW2-SlashGG
