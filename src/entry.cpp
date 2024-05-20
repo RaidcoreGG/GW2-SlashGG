@@ -187,6 +187,7 @@ LPARAM GetLPARAM(uint32_t key, bool down, bool sys)
 
 void AddonLoad(AddonAPI* aApi);
 void AddonUnload();
+void ProcessKeybind(const char* aIdentifier);
 UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void AddonRender();
 void AddonOptions();
@@ -207,6 +208,7 @@ json Settings{};
 std::filesystem::path SettingsPath{};
 std::mutex Mutex;
 
+bool IsSlashGGButtonVisible = true;
 bool IsSlashGGButtonHovered = false;
 Texture* Button = nullptr;
 Texture* ButtonHover = nullptr;
@@ -288,6 +290,8 @@ void AddonLoad(AddonAPI* aApi)
 		delete[] buff;
 	}
 
+	APIDefs->RegisterKeybindWithString("KB_SUDOKU", ProcessKeybind, "CTRL+K");
+
 	AddonPath = APIDefs->GetAddonDirectory("SlashGG");
 	SettingsPath = APIDefs->GetAddonDirectory("SlashGG/settings.json");
 	std::filesystem::create_directory(AddonPath);
@@ -301,6 +305,16 @@ void AddonUnload()
 	APIDefs->DeregisterRender(AddonRender);
 
 	NexusLink = nullptr;
+}
+
+void ProcessKeybind(const char* aIdentifier)
+{
+	if (strcmp(aIdentifier, "KB_SUDOKU") == 0)
+	{
+		std::thread(PerformSudoku)
+			.detach();
+		return;
+	}
 }
 
 UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -361,7 +375,7 @@ UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void AddonRender()
 {
-	if (!NexusLink || !NexusLink->IsGameplay || !MumbleLink || MumbleLink->Context.IsMapOpen || MumbleLink->Context.MapType != Mumble::EMapType::Instance)
+	if (!NexusLink || !NexusLink->IsGameplay || !MumbleLink || MumbleLink->Context.IsMapOpen || !IsSlashGGButtonVisible || (MumbleLink->Context.MapType != Mumble::EMapType::Instance && !isEditingPosition))
 	{
 		return;
 	}
@@ -401,12 +415,6 @@ void AddonRender()
 			ImGui::PopStyleColor(3);
 			ImGui::PopStyleVar(2);
 
-			if (isEditingPosition)
-			{
-				ImGui::PopStyleColor(2);
-				ImGui::PopStyleVar();
-			}
-
 			if (ImGui::BeginPopupContextItem("SlashGGCtxMenu"))
 			{
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0.f, 0.f }); // smol checkbox
@@ -421,6 +429,12 @@ void AddonRender()
 		}
 	}
 	ImGui::End();
+
+	if (isEditingPosition)
+	{
+		ImGui::PopStyleColor(2);
+		ImGui::PopStyleVar();
+	}
 }
 void AddonOptions()
 {
@@ -431,6 +445,15 @@ void AddonOptions()
 		ImGui::OpenPopup("Set Keybind: Open Chat", ImGuiPopupFlags_AnyPopupLevel);
 	}
 	ImGui::TooltipGeneric("This should match whatever keybind you're using in-game for \"Chat Message\".\n");
+
+	if (ImGui::Checkbox("Visible##BTN_SUDOKU_VISIBLE", &IsSlashGGButtonVisible))
+	{
+		SaveSettings(SettingsPath);
+	}
+
+	ImGui::Text("The GG button will only show in instances e.g. Fractals, Raids, Strikes.");
+	ImGui::Text("You can right-click the GG button to edit its position or enable the editing mode from here.");
+	ImGui::Checkbox("Edit Mode##BTN_SUDOKU_EDIT", &isEditingPosition);
 
 	if (ImGui::BeginPopupModal("Set Keybind: Open Chat"))
 	{
@@ -487,111 +510,65 @@ void AddonOptions()
 
 void PerformSudoku()
 {
-	/*char* bufferPrevious;
-		char source[4] = "/gg";
-		if (OpenClipboard(Game))
-		{
-			bufferPrevious = (char*)GetClipboardData(CF_TEXT);
-
-			HGLOBAL clipbuffer = GlobalAlloc(GMEM_DDESHARE, 4);
-			char* buffer = (char*)GlobalLock(clipbuffer);
-			strcpy_s(buffer, 4, LPCSTR(source));
-			GlobalUnlock(clipbuffer);
-			SetClipboardData(CF_TEXT, clipbuffer);
-		}
-		CloseClipboard();*/
-
-	// APIDefs->SendWndProcToGameOnly seems to be bugged?
-	//PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0)); Sleep(5);
-	//PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0)); Sleep(15);
+	char source[4] = "/gg";
 
 	if (!MumbleLink->Context.IsTextboxFocused && OpenChatKeybind == Keybind{}) /* fallback*/
 	{
-		PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0)); Sleep(5);
+		PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
 		PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0)); Sleep(15);
 	}
 	else if (!MumbleLink->Context.IsTextboxFocused)
 	{
 		if (OpenChatKeybind.Alt)
 		{
-			PostMessage(Game, WM_SYSKEYDOWN, VK_MENU, GetLPARAM(VK_MENU, 1, 1)); Sleep(5);
+			PostMessage(Game, WM_SYSKEYDOWN, VK_MENU, GetLPARAM(VK_MENU, 1, 1)); Sleep(15);
 		}
 
 		if (OpenChatKeybind.Shift)
 		{
-			PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, 1, 0)); Sleep(5);
+			PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, 1, 0)); Sleep(15);
 		}
 
 		if (OpenChatKeybind.Ctrl)
 		{
-			PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_SHIFT, 1, 0)); Sleep(5);
+			PostMessage(Game, WM_KEYDOWN, VK_LCONTROL, GetLPARAM(VK_LCONTROL, 1, 0)); Sleep(15);
 		}
 
 		if (OpenChatKeybind.Key)
 		{
 			PostMessage(Game, WM_KEYDOWN, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
-				GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 1, 0)); Sleep(5);
+				GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 1, 0));
 		}
 
 		if (OpenChatKeybind.Key)
 		{
 			PostMessage(Game, WM_KEYUP, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
-				GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 0, 0)); Sleep(5);
+				GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 0, 0)); Sleep(15);
 		}
 
 		if (OpenChatKeybind.Ctrl)
 		{
-			PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, 0, 0)); Sleep(5);
+			PostMessage(Game, WM_KEYUP, VK_LCONTROL, GetLPARAM(VK_LCONTROL, 0, 0)); Sleep(15);
 		}
 
 		if (OpenChatKeybind.Shift)
 		{
-			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, 0, 0)); Sleep(5);
+			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, 0, 0)); Sleep(15);
 		}
 
 		if (OpenChatKeybind.Alt)
 		{
-			PostMessage(Game, WM_SYSKEYUP, VK_MENU, GetLPARAM(VK_MENU, 0, 1)); Sleep(5);
+			PostMessage(Game, WM_SYSKEYUP, VK_MENU, GetLPARAM(VK_MENU, 0, 1)); Sleep(15);
 		}
 	}
 
-	/*INPUT inputs[4] = {};
-	ZeroMemory(inputs, sizeof(inputs));
-
-	inputs[0].type = INPUT_KEYBOARD;
-	inputs[3].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
-	inputs[0].ki.wVk = VK_LCONTROL;
-
-	inputs[1].type = INPUT_KEYBOARD;
-	inputs[3].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
-	inputs[1].ki.wVk = 'V';
-
-	inputs[2].type = INPUT_KEYBOARD;
-	inputs[3].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
-	inputs[2].ki.wVk = 'V';
-	inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
-
-	inputs[3].type = INPUT_KEYBOARD;
-	inputs[3].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
-	inputs[3].ki.wVk = VK_LCONTROL;
-	inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
-
-	UINT uSent = SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));*/
-
-	/*PostMessage(Game, WM_KEYDOWN, VK_LCONTROL, GetLPARAM(VK_LCONTROL, 1, 0)); Sleep(50);
-	PostMessage(Game, WM_KEYDOWN, 0x56, GetLPARAM(0x56, 1, 0)); Sleep(50);
-	PostMessage(Game, WM_KEYUP, 0x56, GetLPARAM(0x56, 0, 0)); Sleep(50);
-	PostMessage(Game, WM_KEYUP, VK_LCONTROL, GetLPARAM(VK_LCONTROL, 0, 0)); Sleep(50);*/
-
-	PostMessage(Game, WM_KEYDOWN, VK_DIVIDE, GetLPARAM(VK_DIVIDE, 1, 0)); Sleep(5);
-	PostMessage(Game, WM_KEYUP, VK_DIVIDE, GetLPARAM(VK_DIVIDE, 0, 0)); Sleep(5);
-
-	PostMessage(Game, WM_KEYDOWN, 0x47, GetLPARAM(0x47, 1, 0)); Sleep(5);
-	PostMessage(Game, WM_KEYUP, 0x47, GetLPARAM(0x47, 0, 0)); Sleep(5);
-	PostMessage(Game, WM_KEYDOWN, 0x47, GetLPARAM(0x47, 1, 0)); Sleep(5);
-	PostMessage(Game, WM_KEYUP, 0x47, GetLPARAM(0x47, 0, 0)); Sleep(5);
-
-	PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0)); Sleep(5);
+	Sleep(15);
+	for (int i = 0; i < strlen(source); i++)
+	{
+		PostMessage(Game, WM_CHAR, (WPARAM)source[i], 0); Sleep(15);
+	}
+	
+	PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
 	PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0));
 }
 
@@ -625,6 +602,7 @@ void LoadSettings(std::filesystem::path aPath)
 		if (!Settings["OC_ALT"].is_null()) { Settings["OC_ALT"].get_to(OpenChatKeybind.Alt); }
 		if (!Settings["OC_CTRL"].is_null()) { Settings["OC_CTRL"].get_to(OpenChatKeybind.Ctrl); }
 		if (!Settings["OC_SHIFT"].is_null()) { Settings["OC_SHIFT"].get_to(OpenChatKeybind.Shift); }
+		if (!Settings["IsVisible"].is_null()) { Settings["IsVisible"].get_to(IsSlashGGButtonVisible); }
 	}
 	else
 	{
@@ -637,6 +615,7 @@ void SaveSettings(std::filesystem::path aPath)
 	Settings["OC_ALT"] = OpenChatKeybind.Alt;
 	Settings["OC_CTRL"] = OpenChatKeybind.Ctrl;
 	Settings["OC_SHIFT"] = OpenChatKeybind.Shift;
+	Settings["IsVisible"] = IsSlashGGButtonVisible;
 
 	Mutex.lock();
 	{
