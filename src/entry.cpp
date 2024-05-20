@@ -213,6 +213,11 @@ bool IsSlashGGButtonHovered = false;
 Texture* Button = nullptr;
 Texture* ButtonHover = nullptr;
 
+std::mutex GGMutex;
+std::thread GGThread;
+bool IsGGThreadRunning = false;
+bool DoGG = false;
+
 Keybind OpenChatKeybind{};
 
 bool isEditingPosition = false;
@@ -242,7 +247,7 @@ extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
 	AddonDef.Version.Build = V_BUILD;
 	AddonDef.Version.Revision = V_REVISION;
 	AddonDef.Author = "Raidcore";
-	AddonDef.Description = "Let's you GG with a button press.";
+	AddonDef.Description = "Lets you GG with a button press.";
 	AddonDef.Load = AddonLoad;
 	AddonDef.Unload = AddonUnload;
 	AddonDef.Flags = EAddonFlags_None;
@@ -296,6 +301,10 @@ void AddonLoad(AddonAPI* aApi)
 	SettingsPath = APIDefs->GetAddonDirectory("SlashGG/settings.json");
 	std::filesystem::create_directory(AddonPath);
 	LoadSettings(SettingsPath);
+
+	IsGGThreadRunning = true;
+	GGThread = std::thread(PerformSudoku);
+	GGThread.detach();
 }
 void AddonUnload()
 {
@@ -304,15 +313,19 @@ void AddonUnload()
 	APIDefs->DeregisterRender(AddonOptions);
 	APIDefs->DeregisterRender(AddonRender);
 
+	MumbleLink = nullptr;
 	NexusLink = nullptr;
+
+	// this ends the thread, I'm too lazy to implement proper logic right now
+	IsGGThreadRunning = false;
+	DoGG = true;
 }
 
 void ProcessKeybind(const char* aIdentifier)
 {
 	if (strcmp(aIdentifier, "KB_SUDOKU") == 0)
 	{
-		std::thread(PerformSudoku)
-			.detach();
+		DoGG = true;
 		return;
 	}
 }
@@ -408,8 +421,7 @@ void AddonRender()
 			}
 			else if (ImGui::ImageButton(IsSlashGGButtonHovered ? ButtonHover->Resource : Button->Resource, ImVec2(40.0f * NexusLink->Scaling, 40.0f * NexusLink->Scaling)))
 			{
-				std::thread(PerformSudoku)
-					.detach();
+				DoGG = true;
 			}
 			IsSlashGGButtonHovered = ImGui::IsItemHovered();
 			ImGui::PopStyleColor(3);
@@ -510,66 +522,166 @@ void AddonOptions()
 
 void PerformSudoku()
 {
-	char source[4] = "/gg";
-
-	if (!MumbleLink->Context.IsTextboxFocused && OpenChatKeybind == Keybind{}) /* fallback*/
+	std::lock_guard<std::mutex> lock(GGMutex);
+	for (;;)
 	{
+		while (!DoGG)
+		{
+			Sleep(1);
+		}
+
+		if (!IsGGThreadRunning)
+		{
+			break;
+		}
+
+		/*if (OpenClipboard(Game))
+		{
+			bufferPrevious = (char*)GetClipboardData(CF_TEXT);
+
+			HGLOBAL clipbuffer = GlobalAlloc(GMEM_DDESHARE, 4);
+			char* buffer = (char*)GlobalLock(clipbuffer);
+			strcpy_s(buffer, 4, LPCSTR(source));
+			GlobalUnlock(clipbuffer);
+			SetClipboardData(CF_TEXT, clipbuffer);
+			CloseClipboard();
+		}*/
+
+		std::string cbPrevious;
+		size_t lenPrevious = 0;
+		char source[4] = "/gg";
+		HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 4);
+		if (hMem)
+		{
+			LPVOID memLock = GlobalLock(hMem);
+			if (memLock)
+			{
+				memcpy(memLock, source, 4);
+				GlobalUnlock(hMem);
+				if (OpenClipboard(Game))
+				{
+					HANDLE cbHandleOld = GetClipboardData(CF_TEXT);
+					cbPrevious = (char*)GlobalLock(cbHandleOld);
+					GlobalUnlock(cbHandleOld);
+					lenPrevious = cbPrevious.size() + 1;
+					EmptyClipboard();
+					SetClipboardData(CF_TEXT, hMem);
+					CloseClipboard();
+				}
+			}
+		}
+
+		if (!MumbleLink->Context.IsTextboxFocused && OpenChatKeybind == Keybind{}) /* fallback*/
+		{
+			PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
+			PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0)); Sleep(15);
+		}
+		else if (!MumbleLink->Context.IsTextboxFocused)
+		{
+			if (OpenChatKeybind.Alt)
+			{
+				PostMessage(Game, WM_SYSKEYDOWN, VK_MENU, GetLPARAM(VK_MENU, 1, 1)); Sleep(15);
+			}
+
+			if (OpenChatKeybind.Shift)
+			{
+				PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, 1, 0)); Sleep(15);
+			}
+
+			if (OpenChatKeybind.Ctrl)
+			{
+				PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, 1, 0)); Sleep(15);
+			}
+
+			if (OpenChatKeybind.Key)
+			{
+				PostMessage(Game, WM_KEYDOWN, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
+					GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 1, 0));
+			}
+
+			if (OpenChatKeybind.Key)
+			{
+				PostMessage(Game, WM_KEYUP, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
+					GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 0, 0)); Sleep(15);
+			}
+
+			if (OpenChatKeybind.Ctrl)
+			{
+				PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, 0, 0)); Sleep(15);
+			}
+
+			if (OpenChatKeybind.Shift)
+			{
+				PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, 0, 0)); Sleep(15);
+			}
+
+			if (OpenChatKeybind.Alt)
+			{
+				PostMessage(Game, WM_SYSKEYUP, VK_MENU, GetLPARAM(VK_MENU, 0, 1)); Sleep(15);
+			}
+		}
+
+		INPUT inputs1[1] = {};
+		INPUT inputs2[3] = {};
+		INPUT inputs3[1] = {};
+
+		inputs1[0].type = INPUT_KEYBOARD;
+		inputs1[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
+		inputs1[0].ki.wVk = VK_LCONTROL;
+
+		inputs2[0].type = INPUT_KEYBOARD;
+		inputs2[0].ki.wScan = MapVirtualKey('A', MAPVK_VK_TO_VSC);
+		inputs2[0].ki.wVk = 'A';
+
+		inputs2[1].type = INPUT_KEYBOARD;
+		inputs2[1].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
+		inputs2[1].ki.wVk = 'V';
+
+		inputs2[2].type = INPUT_KEYBOARD;
+		inputs2[2].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
+		inputs2[2].ki.wVk = 'V';
+		inputs2[2].ki.dwFlags = KEYEVENTF_KEYUP;
+
+		inputs3[0].type = INPUT_KEYBOARD;
+		inputs3[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
+		inputs3[0].ki.wVk = VK_LCONTROL;
+		inputs3[0].ki.dwFlags = KEYEVENTF_KEYUP;
+
+		UINT uSent1 = SendInput(ARRAYSIZE(inputs1), inputs1, sizeof(INPUT)); Sleep(15);
+		UINT uSent2 = SendInput(ARRAYSIZE(inputs2), inputs2, sizeof(INPUT)); Sleep(15);
+		UINT uSent3 = SendInput(ARRAYSIZE(inputs3), inputs3, sizeof(INPUT));
+
+		/*Sleep(15);
+		for (int i = 0; i < strlen(source); i++)
+		{
+			PostMessage(Game, WM_CHAR, (WPARAM)source[i], 0); Sleep(15);
+		}*/
+
 		PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
-		PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0)); Sleep(15);
+		PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0));
+
+		if (!cbPrevious.empty())
+		{
+			HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, lenPrevious);
+			if (hMem)
+			{
+				LPVOID memLock = GlobalLock(hMem);
+				if (memLock)
+				{
+					memcpy(memLock, cbPrevious.c_str(), lenPrevious - 1);
+					GlobalUnlock(hMem);
+					if (OpenClipboard(Game))
+					{
+						EmptyClipboard();
+						SetClipboardData(CF_TEXT, hMem);
+						CloseClipboard();
+					}
+				}
+			}
+		}
+
+		DoGG = false;
 	}
-	else if (!MumbleLink->Context.IsTextboxFocused)
-	{
-		if (OpenChatKeybind.Alt)
-		{
-			PostMessage(Game, WM_SYSKEYDOWN, VK_MENU, GetLPARAM(VK_MENU, 1, 1)); Sleep(15);
-		}
-
-		if (OpenChatKeybind.Shift)
-		{
-			PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, 1, 0)); Sleep(15);
-		}
-
-		if (OpenChatKeybind.Ctrl)
-		{
-			PostMessage(Game, WM_KEYDOWN, VK_LCONTROL, GetLPARAM(VK_LCONTROL, 1, 0)); Sleep(15);
-		}
-
-		if (OpenChatKeybind.Key)
-		{
-			PostMessage(Game, WM_KEYDOWN, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
-				GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 1, 0));
-		}
-
-		if (OpenChatKeybind.Key)
-		{
-			PostMessage(Game, WM_KEYUP, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
-				GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 0, 0)); Sleep(15);
-		}
-
-		if (OpenChatKeybind.Ctrl)
-		{
-			PostMessage(Game, WM_KEYUP, VK_LCONTROL, GetLPARAM(VK_LCONTROL, 0, 0)); Sleep(15);
-		}
-
-		if (OpenChatKeybind.Shift)
-		{
-			PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, 0, 0)); Sleep(15);
-		}
-
-		if (OpenChatKeybind.Alt)
-		{
-			PostMessage(Game, WM_SYSKEYUP, VK_MENU, GetLPARAM(VK_MENU, 0, 1)); Sleep(15);
-		}
-	}
-
-	Sleep(15);
-	for (int i = 0; i < strlen(source); i++)
-	{
-		PostMessage(Game, WM_CHAR, (WPARAM)source[i], 0); Sleep(15);
-	}
-	
-	PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
-	PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0));
 }
 
 void LoadSettings(std::filesystem::path aPath)
