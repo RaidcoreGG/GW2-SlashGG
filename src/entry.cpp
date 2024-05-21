@@ -561,9 +561,12 @@ void PerformSudoku()
 				if (OpenClipboard(Game))
 				{
 					HANDLE cbHandleOld = GetClipboardData(CF_TEXT);
-					cbPrevious = (char*)GlobalLock(cbHandleOld);
+					if (cbHandleOld)
+					{
+						cbPrevious = (char*)GlobalLock(cbHandleOld);
+						lenPrevious = cbPrevious.size() + 1;
+					}
 					GlobalUnlock(cbHandleOld);
-					lenPrevious = cbPrevious.size() + 1;
 					EmptyClipboard();
 					SetClipboardData(CF_TEXT, hMem);
 					CloseClipboard();
@@ -621,6 +624,7 @@ void PerformSudoku()
 			}
 		}
 
+		Sleep(15); // let's see if this helps
 		INPUT inputs1[1] = {};
 		INPUT inputs2[3] = {};
 		INPUT inputs3[1] = {};
@@ -649,7 +653,7 @@ void PerformSudoku()
 
 		UINT uSent1 = SendInput(ARRAYSIZE(inputs1), inputs1, sizeof(INPUT)); Sleep(15);
 		UINT uSent2 = SendInput(ARRAYSIZE(inputs2), inputs2, sizeof(INPUT)); Sleep(15);
-		UINT uSent3 = SendInput(ARRAYSIZE(inputs3), inputs3, sizeof(INPUT));
+		UINT uSent3 = SendInput(ARRAYSIZE(inputs3), inputs3, sizeof(INPUT)); Sleep(15);
 
 		/*Sleep(15);
 		for (int i = 0; i < strlen(source); i++)
