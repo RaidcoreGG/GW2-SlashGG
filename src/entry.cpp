@@ -547,138 +547,141 @@ void PerformSudoku()
 			CloseClipboard();
 		}*/
 
-		std::string cbPrevious;
-		size_t lenPrevious = 0;
-		char source[4] = "/gg";
-		HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 4);
-		if (hMem)
+		if (!MumbleLink->Context.IsTextboxFocused)
 		{
-			LPVOID memLock = GlobalLock(hMem);
-			if (memLock)
-			{
-				memcpy(memLock, source, 4);
-				GlobalUnlock(hMem);
-				if (OpenClipboard(Game))
-				{
-					HANDLE cbHandleOld = GetClipboardData(CF_TEXT);
-					if (cbHandleOld)
-					{
-						cbPrevious = (char*)GlobalLock(cbHandleOld);
-						lenPrevious = cbPrevious.size() + 1;
-					}
-					GlobalUnlock(cbHandleOld);
-					EmptyClipboard();
-					SetClipboardData(CF_TEXT, hMem);
-					CloseClipboard();
-				}
-			}
-		}
-
-		if (!MumbleLink->Context.IsTextboxFocused && OpenChatKeybind == Keybind{}) /* fallback*/
-		{
-			PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
-			PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0)); Sleep(15);
-		}
-		else if (!MumbleLink->Context.IsTextboxFocused)
-		{
-			if (OpenChatKeybind.Alt)
-			{
-				PostMessage(Game, WM_SYSKEYDOWN, VK_MENU, GetLPARAM(VK_MENU, 1, 1)); Sleep(15);
-			}
-
-			if (OpenChatKeybind.Shift)
-			{
-				PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, 1, 0)); Sleep(15);
-			}
-
-			if (OpenChatKeybind.Ctrl)
-			{
-				PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, 1, 0)); Sleep(15);
-			}
-
-			if (OpenChatKeybind.Key)
-			{
-				PostMessage(Game, WM_KEYDOWN, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
-					GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 1, 0));
-			}
-
-			if (OpenChatKeybind.Key)
-			{
-				PostMessage(Game, WM_KEYUP, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
-					GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 0, 0)); Sleep(15);
-			}
-
-			if (OpenChatKeybind.Ctrl)
-			{
-				PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, 0, 0)); Sleep(15);
-			}
-
-			if (OpenChatKeybind.Shift)
-			{
-				PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, 0, 0)); Sleep(15);
-			}
-
-			if (OpenChatKeybind.Alt)
-			{
-				PostMessage(Game, WM_SYSKEYUP, VK_MENU, GetLPARAM(VK_MENU, 0, 1)); Sleep(15);
-			}
-		}
-
-		Sleep(15); // let's see if this helps
-		INPUT inputs1[1] = {};
-		INPUT inputs2[3] = {};
-		INPUT inputs3[1] = {};
-
-		inputs1[0].type = INPUT_KEYBOARD;
-		inputs1[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
-		inputs1[0].ki.wVk = VK_LCONTROL;
-
-		inputs2[0].type = INPUT_KEYBOARD;
-		inputs2[0].ki.wScan = MapVirtualKey('A', MAPVK_VK_TO_VSC);
-		inputs2[0].ki.wVk = 'A';
-
-		inputs2[1].type = INPUT_KEYBOARD;
-		inputs2[1].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
-		inputs2[1].ki.wVk = 'V';
-
-		inputs2[2].type = INPUT_KEYBOARD;
-		inputs2[2].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
-		inputs2[2].ki.wVk = 'V';
-		inputs2[2].ki.dwFlags = KEYEVENTF_KEYUP;
-
-		inputs3[0].type = INPUT_KEYBOARD;
-		inputs3[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
-		inputs3[0].ki.wVk = VK_LCONTROL;
-		inputs3[0].ki.dwFlags = KEYEVENTF_KEYUP;
-
-		UINT uSent1 = SendInput(ARRAYSIZE(inputs1), inputs1, sizeof(INPUT)); Sleep(15);
-		UINT uSent2 = SendInput(ARRAYSIZE(inputs2), inputs2, sizeof(INPUT)); Sleep(15);
-		UINT uSent3 = SendInput(ARRAYSIZE(inputs3), inputs3, sizeof(INPUT)); Sleep(15);
-
-		/*Sleep(15);
-		for (int i = 0; i < strlen(source); i++)
-		{
-			PostMessage(Game, WM_CHAR, (WPARAM)source[i], 0); Sleep(15);
-		}*/
-
-		PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
-		PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0));
-
-		if (!cbPrevious.empty())
-		{
-			HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, lenPrevious);
+			std::string cbPrevious;
+			size_t lenPrevious = 0;
+			char source[4] = "/gg";
+			HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 4);
 			if (hMem)
 			{
 				LPVOID memLock = GlobalLock(hMem);
 				if (memLock)
 				{
-					memcpy(memLock, cbPrevious.c_str(), lenPrevious - 1);
+					memcpy(memLock, source, 4);
 					GlobalUnlock(hMem);
 					if (OpenClipboard(Game))
 					{
+						HANDLE cbHandleOld = GetClipboardData(CF_TEXT);
+						if (cbHandleOld)
+						{
+							cbPrevious = (char*)GlobalLock(cbHandleOld);
+							lenPrevious = cbPrevious.size() + 1;
+						}
+						GlobalUnlock(cbHandleOld);
 						EmptyClipboard();
 						SetClipboardData(CF_TEXT, hMem);
 						CloseClipboard();
+					}
+				}
+			}
+
+			if (OpenChatKeybind == Keybind{}) /* fallback*/
+			{
+				PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
+				PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0)); Sleep(15);
+			}
+			else
+			{
+				if (OpenChatKeybind.Alt)
+				{
+					PostMessage(Game, WM_SYSKEYDOWN, VK_MENU, GetLPARAM(VK_MENU, 1, 1)); Sleep(15);
+				}
+
+				if (OpenChatKeybind.Shift)
+				{
+					PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, 1, 0)); Sleep(15);
+				}
+
+				if (OpenChatKeybind.Ctrl)
+				{
+					PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, 1, 0)); Sleep(15);
+				}
+
+				if (OpenChatKeybind.Key)
+				{
+					PostMessage(Game, WM_KEYDOWN, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
+						GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 1, 0));
+				}
+
+				if (OpenChatKeybind.Key)
+				{
+					PostMessage(Game, WM_KEYUP, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
+						GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 0, 0)); Sleep(15);
+				}
+
+				if (OpenChatKeybind.Ctrl)
+				{
+					PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, 0, 0)); Sleep(15);
+				}
+
+				if (OpenChatKeybind.Shift)
+				{
+					PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, 0, 0)); Sleep(15);
+				}
+
+				if (OpenChatKeybind.Alt)
+				{
+					PostMessage(Game, WM_SYSKEYUP, VK_MENU, GetLPARAM(VK_MENU, 0, 1)); Sleep(15);
+				}
+			}
+
+			Sleep(15); // let's see if this helps
+			INPUT inputs1[1] = {};
+			INPUT inputs2[3] = {};
+			INPUT inputs3[1] = {};
+
+			inputs1[0].type = INPUT_KEYBOARD;
+			inputs1[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
+			inputs1[0].ki.wVk = VK_LCONTROL;
+
+			inputs2[0].type = INPUT_KEYBOARD;
+			inputs2[0].ki.wScan = MapVirtualKey('A', MAPVK_VK_TO_VSC);
+			inputs2[0].ki.wVk = 'A';
+
+			inputs2[1].type = INPUT_KEYBOARD;
+			inputs2[1].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
+			inputs2[1].ki.wVk = 'V';
+
+			inputs2[2].type = INPUT_KEYBOARD;
+			inputs2[2].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
+			inputs2[2].ki.wVk = 'V';
+			inputs2[2].ki.dwFlags = KEYEVENTF_KEYUP;
+
+			inputs3[0].type = INPUT_KEYBOARD;
+			inputs3[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
+			inputs3[0].ki.wVk = VK_LCONTROL;
+			inputs3[0].ki.dwFlags = KEYEVENTF_KEYUP;
+
+			UINT uSent1 = SendInput(ARRAYSIZE(inputs1), inputs1, sizeof(INPUT)); Sleep(15);
+			UINT uSent2 = SendInput(ARRAYSIZE(inputs2), inputs2, sizeof(INPUT)); Sleep(15);
+			UINT uSent3 = SendInput(ARRAYSIZE(inputs3), inputs3, sizeof(INPUT)); Sleep(15);
+
+			/*Sleep(15);
+			for (int i = 0; i < strlen(source); i++)
+			{
+				PostMessage(Game, WM_CHAR, (WPARAM)source[i], 0); Sleep(15);
+			}*/
+
+			PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
+			PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0));
+
+			if (!cbPrevious.empty())
+			{
+				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, lenPrevious);
+				if (hMem)
+				{
+					LPVOID memLock = GlobalLock(hMem);
+					if (memLock)
+					{
+						memcpy(memLock, cbPrevious.c_str(), lenPrevious - 1);
+						GlobalUnlock(hMem);
+						if (OpenClipboard(Game))
+						{
+							EmptyClipboard();
+							SetClipboardData(CF_TEXT, hMem);
+							CloseClipboard();
+						}
 					}
 				}
 			}
