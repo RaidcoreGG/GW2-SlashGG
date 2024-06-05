@@ -319,6 +319,7 @@ void AddonUnload()
 	// this ends the thread, I'm too lazy to implement proper logic right now
 	IsGGThreadRunning = false;
 	DoGG = true;
+	std::lock_guard<std::mutex> lock(GGMutex);
 }
 
 void ProcessKeybind(const char* aIdentifier)
@@ -393,7 +394,9 @@ void AddonRender()
 		return;
 	}
 
-	if (isEditingPosition)
+	bool wasEditingPosition = isEditingPosition;
+
+	if (wasEditingPosition)
 	{
 		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1.0f, 0.0f, 0.0f, 0.5f));
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -415,7 +418,7 @@ void AddonRender()
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0.f, 0.f });
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.f, 0.f });
 
-			if (isEditingPosition)
+			if (wasEditingPosition)
 			{
 				ImGui::Image(IsSlashGGButtonHovered ? ButtonHover->Resource : Button->Resource, ImVec2(40.0f * NexusLink->Scaling, 40.0f * NexusLink->Scaling));
 			}
@@ -442,7 +445,7 @@ void AddonRender()
 	}
 	ImGui::End();
 
-	if (isEditingPosition)
+	if (wasEditingPosition)
 	{
 		ImGui::PopStyleColor(2);
 		ImGui::PopStyleVar();
