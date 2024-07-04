@@ -629,10 +629,17 @@ void PerformSudoku()
 				}
 			}
 
-			Sleep(15); // let's see if this helps
+			while (!MumbleLink->Context.IsTextboxFocused)
+			{
+				Sleep(1);
+			}
+
+			Sleep(35);
+
 			INPUT inputs1[1] = {};
 			INPUT inputs2[3] = {};
 			INPUT inputs3[1] = {};
+			INPUT inputs4[2] = {};
 
 			inputs1[0].type = INPUT_KEYBOARD;
 			inputs1[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
@@ -656,9 +663,19 @@ void PerformSudoku()
 			inputs3[0].ki.wVk = VK_LCONTROL;
 			inputs3[0].ki.dwFlags = KEYEVENTF_KEYUP;
 
+			inputs4[0].type = INPUT_KEYBOARD;
+			inputs4[0].ki.wScan = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
+			inputs4[0].ki.wVk = VK_RETURN;
+
+			inputs4[1].type = INPUT_KEYBOARD;
+			inputs4[1].ki.wScan = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
+			inputs4[1].ki.wVk = VK_RETURN;
+			inputs4[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
 			UINT uSent1 = SendInput(ARRAYSIZE(inputs1), inputs1, sizeof(INPUT)); Sleep(15);
 			UINT uSent2 = SendInput(ARRAYSIZE(inputs2), inputs2, sizeof(INPUT)); Sleep(15);
 			UINT uSent3 = SendInput(ARRAYSIZE(inputs3), inputs3, sizeof(INPUT)); Sleep(15);
+			UINT uSent4 = SendInput(ARRAYSIZE(inputs4), inputs4, sizeof(INPUT)); Sleep(15);
 
 			/*Sleep(15);
 			for (int i = 0; i < strlen(source); i++)
@@ -666,8 +683,8 @@ void PerformSudoku()
 				PostMessage(Game, WM_CHAR, (WPARAM)source[i], 0); Sleep(15);
 			}*/
 
-			PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
-			PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0));
+			//PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
+			//PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0));
 
 			if (!cbPrevious.empty())
 			{
