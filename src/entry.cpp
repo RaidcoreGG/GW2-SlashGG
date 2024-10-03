@@ -636,46 +636,62 @@ void PerformSudoku()
 
 			Sleep(35);
 
-			INPUT inputs1[1] = {};
-			INPUT inputs2[3] = {};
-			INPUT inputs3[1] = {};
-			INPUT inputs4[2] = {};
+			INPUT ctrlA1[2] = {};
+			INPUT ctrlA2[2] = {};
+			INPUT ctrlV1[2] = {};
+			INPUT ctrlV2[2] = {};
+			INPUT ret[2] = {};
 
-			inputs1[0].type = INPUT_KEYBOARD;
-			inputs1[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
-			inputs1[0].ki.wVk = VK_LCONTROL;
+			ctrlA1[0].type = INPUT_KEYBOARD;
+			ctrlA1[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
+			ctrlA1[0].ki.wVk = VK_LCONTROL;
 
-			inputs2[0].type = INPUT_KEYBOARD;
-			inputs2[0].ki.wScan = MapVirtualKey('A', MAPVK_VK_TO_VSC);
-			inputs2[0].ki.wVk = 'A';
+			ctrlA1[1].type = INPUT_KEYBOARD;
+			ctrlA1[1].ki.wScan = MapVirtualKey('A', MAPVK_VK_TO_VSC);
+			ctrlA1[1].ki.wVk = 'A';
 
-			inputs2[1].type = INPUT_KEYBOARD;
-			inputs2[1].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
-			inputs2[1].ki.wVk = 'V';
+			ctrlA2[0].type = INPUT_KEYBOARD;
+			ctrlA2[0].ki.wScan = MapVirtualKey('A', MAPVK_VK_TO_VSC);
+			ctrlA2[0].ki.wVk = 'A';
+			ctrlA2[0].ki.dwFlags = KEYEVENTF_KEYUP;
 
-			inputs2[2].type = INPUT_KEYBOARD;
-			inputs2[2].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
-			inputs2[2].ki.wVk = 'V';
-			inputs2[2].ki.dwFlags = KEYEVENTF_KEYUP;
+			ctrlA2[1].type = INPUT_KEYBOARD;
+			ctrlA2[1].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
+			ctrlA2[1].ki.wVk = VK_LCONTROL;
+			ctrlA2[1].ki.dwFlags = KEYEVENTF_KEYUP;
 
-			inputs3[0].type = INPUT_KEYBOARD;
-			inputs3[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
-			inputs3[0].ki.wVk = VK_LCONTROL;
-			inputs3[0].ki.dwFlags = KEYEVENTF_KEYUP;
+			ctrlV1[0].type = INPUT_KEYBOARD;
+			ctrlV1[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
+			ctrlV1[0].ki.wVk = VK_LCONTROL;
 
-			inputs4[0].type = INPUT_KEYBOARD;
-			inputs4[0].ki.wScan = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
-			inputs4[0].ki.wVk = VK_RETURN;
+			ctrlV1[1].type = INPUT_KEYBOARD;
+			ctrlV1[1].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
+			ctrlV1[1].ki.wVk = 'V';
 
-			inputs4[1].type = INPUT_KEYBOARD;
-			inputs4[1].ki.wScan = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
-			inputs4[1].ki.wVk = VK_RETURN;
-			inputs4[1].ki.dwFlags = KEYEVENTF_KEYUP;
+			ctrlV2[0].type = INPUT_KEYBOARD;
+			ctrlV2[0].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
+			ctrlV2[0].ki.wVk = 'V';
+			ctrlV2[0].ki.dwFlags = KEYEVENTF_KEYUP;
 
-			UINT uSent1 = SendInput(ARRAYSIZE(inputs1), inputs1, sizeof(INPUT)); Sleep(15);
-			UINT uSent2 = SendInput(ARRAYSIZE(inputs2), inputs2, sizeof(INPUT)); Sleep(15);
-			UINT uSent3 = SendInput(ARRAYSIZE(inputs3), inputs3, sizeof(INPUT)); Sleep(15);
-			UINT uSent4 = SendInput(ARRAYSIZE(inputs4), inputs4, sizeof(INPUT)); Sleep(15);
+			ctrlV2[1].type = INPUT_KEYBOARD;
+			ctrlV2[1].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
+			ctrlV2[1].ki.wVk = VK_LCONTROL;
+			ctrlV2[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+			ret[0].type = INPUT_KEYBOARD;
+			ret[0].ki.wScan = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
+			ret[0].ki.wVk = VK_RETURN;
+
+			ret[1].type = INPUT_KEYBOARD;
+			ret[1].ki.wScan = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
+			ret[1].ki.wVk = VK_RETURN;
+			ret[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+			UINT uSent1 = SendInput(ARRAYSIZE(ctrlA1), ctrlA1, sizeof(INPUT)); Sleep(50);
+			UINT uSent2 = SendInput(ARRAYSIZE(ctrlA2), ctrlA2, sizeof(INPUT)); Sleep(50);
+			UINT uSent3 = SendInput(ARRAYSIZE(ctrlV1), ctrlV1, sizeof(INPUT)); Sleep(50);
+			UINT uSent4 = SendInput(ARRAYSIZE(ctrlV2), ctrlV2, sizeof(INPUT)); Sleep(50);
+			UINT uSent5 = SendInput(ARRAYSIZE(ret), ret, sizeof(INPUT)); Sleep(50);
 
 			/*Sleep(15);
 			for (int i = 0; i < strlen(source); i++)
