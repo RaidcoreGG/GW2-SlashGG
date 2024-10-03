@@ -218,8 +218,6 @@ std::thread GGThread;
 bool IsGGThreadRunning = false;
 bool DoGG = false;
 
-Keybind OpenChatKeybind{};
-
 bool isEditingPosition = false;
 
 Keybind CurrentKeybind{};
@@ -453,14 +451,6 @@ void AddonRender()
 }
 void AddonOptions()
 {
-	ImGui::Text("Open Chat Keybind:");
-	ImGui::SameLine();
-	if (ImGui::Button((KeybindToString(OpenChatKeybind, true) + "##OpenChat").c_str()))
-	{
-		ImGui::OpenPopup("Set Keybind: Open Chat", ImGuiPopupFlags_AnyPopupLevel);
-	}
-	ImGui::TooltipGeneric("This should match whatever keybind you're using in-game for \"Chat Message\".\n");
-
 	if (ImGui::Checkbox("Visible##BTN_SUDOKU_VISIBLE", &IsSlashGGButtonVisible))
 	{
 		SaveSettings(SettingsPath);
@@ -469,58 +459,6 @@ void AddonOptions()
 	ImGui::Text("The GG button will only show in instances e.g. Fractals, Raids, Strikes.");
 	ImGui::Text("You can right-click the GG button to edit its position or enable the editing mode from here.");
 	ImGui::Checkbox("Edit Mode##BTN_SUDOKU_EDIT", &isEditingPosition);
-
-	if (ImGui::BeginPopupModal("Set Keybind: Open Chat"))
-	{
-		isSettingKeybind = true;
-		if (CurrentKeybind == Keybind{})
-		{
-			ImGui::Text(KeybindToString(OpenChatKeybind, true).c_str());
-		}
-		else
-		{
-			ImGui::Text(KeybindToString(CurrentKeybind, true).c_str());
-		}
-
-		bool close = false;
-
-		if (ImGui::Button("Unbind"))
-		{
-			OpenChatKeybind = {};
-			close = true;
-		}
-
-		/* i love imgui */
-		ImGui::SameLine();
-		ImGui::Spacing();
-		ImGui::SameLine();
-		ImGui::Spacing();
-		ImGui::SameLine();
-		ImGui::Spacing();
-		ImGui::SameLine();
-		/* i love imgui end*/
-
-		if (ImGui::Button("Accept"))
-		{
-			OpenChatKeybind = CurrentKeybind;
-			close = true;
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Cancel"))
-		{
-			close = true;
-		}
-
-		if (close)
-		{
-			CurrentKeybind = Keybind{};
-			isSettingKeybind = false;
-			SaveSettings(SettingsPath);
-			ImGui::CloseCurrentPopup();
-		}
-
-		ImGui::EndPopup();
-	}
 }
 
 void PerformSudoku()
@@ -579,119 +517,61 @@ void PerformSudoku()
 				}
 			}
 
-			if (OpenChatKeybind == Keybind{}) /* fallback*/
-			{
-				PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
-				PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0)); Sleep(15);
-			}
-			else
-			{
-				if (OpenChatKeybind.Alt)
-				{
-					PostMessage(Game, WM_SYSKEYDOWN, VK_MENU, GetLPARAM(VK_MENU, 1, 1)); Sleep(15);
-				}
+			INPUT retPress[1] = {};
+			INPUT retRelease[1] = {};
 
-				if (OpenChatKeybind.Shift)
-				{
-					PostMessage(Game, WM_KEYDOWN, VK_SHIFT, GetLPARAM(VK_SHIFT, 1, 0)); Sleep(15);
-				}
+			retPress[0].type = INPUT_KEYBOARD;
+			retPress[0].ki.wScan = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
+			retPress[0].ki.wVk = VK_RETURN;
 
-				if (OpenChatKeybind.Ctrl)
-				{
-					PostMessage(Game, WM_KEYDOWN, VK_CONTROL, GetLPARAM(VK_CONTROL, 1, 0)); Sleep(15);
-				}
+			retRelease[0].type = INPUT_KEYBOARD;
+			retRelease[0].ki.wScan = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
+			retRelease[0].ki.wVk = VK_RETURN;
+			retRelease[0].ki.dwFlags = KEYEVENTF_KEYUP;
 
-				if (OpenChatKeybind.Key)
-				{
-					PostMessage(Game, WM_KEYDOWN, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
-						GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 1, 0));
-				}
+			INPUT lctrlPress[1] = {};
+			INPUT lctrlRelease[1] = {};
 
-				if (OpenChatKeybind.Key)
-				{
-					PostMessage(Game, WM_KEYUP, MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK),
-						GetLPARAM(MapVirtualKey(OpenChatKeybind.Key, MAPVK_VSC_TO_VK), 0, 0)); Sleep(15);
-				}
+			lctrlPress[0].type = INPUT_KEYBOARD;
+			lctrlPress[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
+			lctrlPress[0].ki.wVk = VK_LCONTROL;
 
-				if (OpenChatKeybind.Ctrl)
-				{
-					PostMessage(Game, WM_KEYUP, VK_CONTROL, GetLPARAM(VK_CONTROL, 0, 0)); Sleep(15);
-				}
+			lctrlRelease[0].type = INPUT_KEYBOARD;
+			lctrlRelease[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
+			lctrlRelease[0].ki.wVk = VK_LCONTROL;
+			lctrlRelease[0].ki.dwFlags = KEYEVENTF_KEYUP;
 
-				if (OpenChatKeybind.Shift)
-				{
-					PostMessage(Game, WM_KEYUP, VK_SHIFT, GetLPARAM(VK_SHIFT, 0, 0)); Sleep(15);
-				}
+			INPUT vPress[1] = {};
+			INPUT vRelease[1] = {};
 
-				if (OpenChatKeybind.Alt)
-				{
-					PostMessage(Game, WM_SYSKEYUP, VK_MENU, GetLPARAM(VK_MENU, 0, 1)); Sleep(15);
-				}
-			}
+			vPress[0].type = INPUT_KEYBOARD;
+			vPress[0].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
+			vPress[0].ki.wVk = 'V';
 
-			while (!MumbleLink->Context.IsTextboxFocused)
-			{
-				Sleep(1);
-			}
+			vRelease[0].type = INPUT_KEYBOARD;
+			vRelease[0].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
+			vRelease[0].ki.wVk = 'V';
+			vRelease[0].ki.dwFlags = KEYEVENTF_KEYUP;
 
-			Sleep(35);
+			/* return stroke  */
+			SendInput(ARRAYSIZE(retPress), retPress, sizeof(INPUT));
+			SendInput(ARRAYSIZE(retRelease), retRelease, sizeof(INPUT));
 
-			INPUT ctrlA1[2] = {};
-			INPUT ctrlA2[2] = {};
-			INPUT ctrlV1[2] = {};
-			INPUT ctrlV2[2] = {};
-			INPUT ret[2] = {};
+			/* lctrl press */
+			SendInput(ARRAYSIZE(lctrlPress), lctrlPress, sizeof(INPUT));
 
-			ctrlA1[0].type = INPUT_KEYBOARD;
-			ctrlA1[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
-			ctrlA1[0].ki.wVk = VK_LCONTROL;
+			/* v stroke */
+			SendInput(ARRAYSIZE(vPress), vPress, sizeof(INPUT));
+			SendInput(ARRAYSIZE(vRelease), vRelease, sizeof(INPUT));
 
-			ctrlA1[1].type = INPUT_KEYBOARD;
-			ctrlA1[1].ki.wScan = MapVirtualKey('A', MAPVK_VK_TO_VSC);
-			ctrlA1[1].ki.wVk = 'A';
+			Sleep(50);
 
-			ctrlA2[0].type = INPUT_KEYBOARD;
-			ctrlA2[0].ki.wScan = MapVirtualKey('A', MAPVK_VK_TO_VSC);
-			ctrlA2[0].ki.wVk = 'A';
-			ctrlA2[0].ki.dwFlags = KEYEVENTF_KEYUP;
+			/* lctrl release */
+			SendInput(ARRAYSIZE(lctrlRelease), lctrlRelease, sizeof(INPUT));
 
-			ctrlA2[1].type = INPUT_KEYBOARD;
-			ctrlA2[1].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
-			ctrlA2[1].ki.wVk = VK_LCONTROL;
-			ctrlA2[1].ki.dwFlags = KEYEVENTF_KEYUP;
-
-			ctrlV1[0].type = INPUT_KEYBOARD;
-			ctrlV1[0].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
-			ctrlV1[0].ki.wVk = VK_LCONTROL;
-
-			ctrlV1[1].type = INPUT_KEYBOARD;
-			ctrlV1[1].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
-			ctrlV1[1].ki.wVk = 'V';
-
-			ctrlV2[0].type = INPUT_KEYBOARD;
-			ctrlV2[0].ki.wScan = MapVirtualKey('V', MAPVK_VK_TO_VSC);
-			ctrlV2[0].ki.wVk = 'V';
-			ctrlV2[0].ki.dwFlags = KEYEVENTF_KEYUP;
-
-			ctrlV2[1].type = INPUT_KEYBOARD;
-			ctrlV2[1].ki.wScan = MapVirtualKey(VK_LCONTROL, MAPVK_VK_TO_VSC);
-			ctrlV2[1].ki.wVk = VK_LCONTROL;
-			ctrlV2[1].ki.dwFlags = KEYEVENTF_KEYUP;
-
-			ret[0].type = INPUT_KEYBOARD;
-			ret[0].ki.wScan = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
-			ret[0].ki.wVk = VK_RETURN;
-
-			ret[1].type = INPUT_KEYBOARD;
-			ret[1].ki.wScan = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
-			ret[1].ki.wVk = VK_RETURN;
-			ret[1].ki.dwFlags = KEYEVENTF_KEYUP;
-
-			UINT uSent1 = SendInput(ARRAYSIZE(ctrlA1), ctrlA1, sizeof(INPUT)); Sleep(50);
-			UINT uSent2 = SendInput(ARRAYSIZE(ctrlA2), ctrlA2, sizeof(INPUT)); Sleep(50);
-			UINT uSent3 = SendInput(ARRAYSIZE(ctrlV1), ctrlV1, sizeof(INPUT)); Sleep(50);
-			UINT uSent4 = SendInput(ARRAYSIZE(ctrlV2), ctrlV2, sizeof(INPUT)); Sleep(50);
-			UINT uSent5 = SendInput(ARRAYSIZE(ret), ret, sizeof(INPUT)); Sleep(50);
+			/* return stroke  */
+			SendInput(ARRAYSIZE(retPress), retPress, sizeof(INPUT));
+			SendInput(ARRAYSIZE(retRelease), retRelease, sizeof(INPUT));
 
 			/*Sleep(15);
 			for (int i = 0; i < strlen(source); i++)
@@ -731,7 +611,6 @@ void LoadSettings(std::filesystem::path aPath)
 {
 	if (!std::filesystem::exists(aPath))
 	{
-		OpenChatKeybind.Key = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
 		return;
 	}
 
@@ -753,23 +632,11 @@ void LoadSettings(std::filesystem::path aPath)
 
 	if (!Settings.is_null())
 	{
-		if (!Settings["OC_KEY"].is_null()) { Settings["OC_KEY"].get_to(OpenChatKeybind.Key); }
-		if (!Settings["OC_ALT"].is_null()) { Settings["OC_ALT"].get_to(OpenChatKeybind.Alt); }
-		if (!Settings["OC_CTRL"].is_null()) { Settings["OC_CTRL"].get_to(OpenChatKeybind.Ctrl); }
-		if (!Settings["OC_SHIFT"].is_null()) { Settings["OC_SHIFT"].get_to(OpenChatKeybind.Shift); }
 		if (!Settings["IsVisible"].is_null()) { Settings["IsVisible"].get_to(IsSlashGGButtonVisible); }
-	}
-	else
-	{
-		OpenChatKeybind.Key = MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC);
 	}
 }
 void SaveSettings(std::filesystem::path aPath)
 {
-	Settings["OC_KEY"] = OpenChatKeybind.Key;
-	Settings["OC_ALT"] = OpenChatKeybind.Alt;
-	Settings["OC_CTRL"] = OpenChatKeybind.Ctrl;
-	Settings["OC_SHIFT"] = OpenChatKeybind.Shift;
 	Settings["IsVisible"] = IsSlashGGButtonVisible;
 
 	Mutex.lock();
