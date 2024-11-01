@@ -488,7 +488,7 @@ void PerformSudoku()
 			CloseClipboard();
 		}*/
 
-		if (!MumbleLink->Context.IsTextboxFocused)
+		if (!MumbleLink->Context.IsTextboxFocused && MumbleLink->Context.MapType == Mumble::EMapType::Instance)
 		{
 			std::string cbPrevious;
 			size_t lenPrevious = 0;
@@ -557,30 +557,48 @@ void PerformSudoku()
 			SendInput(ARRAYSIZE(retPress), retPress, sizeof(INPUT));
 			SendInput(ARRAYSIZE(retRelease), retRelease, sizeof(INPUT));
 
-			/* lctrl press */
-			SendInput(ARRAYSIZE(lctrlPress), lctrlPress, sizeof(INPUT));
-
-			/* v stroke */
-			SendInput(ARRAYSIZE(vPress), vPress, sizeof(INPUT));
-			SendInput(ARRAYSIZE(vRelease), vRelease, sizeof(INPUT));
-
-			Sleep(50);
-
-			/* lctrl release */
-			SendInput(ARRAYSIZE(lctrlRelease), lctrlRelease, sizeof(INPUT));
-
-			/* return stroke  */
-			SendInput(ARRAYSIZE(retPress), retPress, sizeof(INPUT));
-			SendInput(ARRAYSIZE(retRelease), retRelease, sizeof(INPUT));
-
-			/*Sleep(15);
-			for (int i = 0; i < strlen(source); i++)
+			int wait = 0;
+			while (!MumbleLink->Context.IsTextboxFocused)
 			{
-				PostMessage(Game, WM_CHAR, (WPARAM)source[i], 0); Sleep(15);
-			}*/
+				Sleep(1);
+				wait++;
 
-			//PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
-			//PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0));
+				if (wait >= 50)
+				{
+					break;
+				}
+			}
+
+			APIDefs->Log(ELogLevel_DEBUG, "wtf", std::to_string(wait).c_str());
+
+			/* continue loop */
+			if (wait < 50)
+			{
+				/* lctrl press */
+				SendInput(ARRAYSIZE(lctrlPress), lctrlPress, sizeof(INPUT));
+
+				/* v stroke */
+				SendInput(ARRAYSIZE(vPress), vPress, sizeof(INPUT));
+				SendInput(ARRAYSIZE(vRelease), vRelease, sizeof(INPUT));
+
+				Sleep(50);
+
+				/* lctrl release */
+				SendInput(ARRAYSIZE(lctrlRelease), lctrlRelease, sizeof(INPUT));
+
+				/* return stroke  */
+				SendInput(ARRAYSIZE(retPress), retPress, sizeof(INPUT));
+				SendInput(ARRAYSIZE(retRelease), retRelease, sizeof(INPUT));
+
+				/*Sleep(15);
+				for (int i = 0; i < strlen(source); i++)
+				{
+					PostMessage(Game, WM_CHAR, (WPARAM)source[i], 0); Sleep(15);
+				}*/
+
+				//PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
+				//PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0));
+			}
 
 			if (!cbPrevious.empty())
 			{
