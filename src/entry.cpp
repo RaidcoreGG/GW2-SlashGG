@@ -476,18 +476,6 @@ void PerformSudoku()
 			break;
 		}
 
-		/*if (OpenClipboard(Game))
-		{
-			bufferPrevious = (char*)GetClipboardData(CF_TEXT);
-
-			HGLOBAL clipbuffer = GlobalAlloc(GMEM_DDESHARE, 4);
-			char* buffer = (char*)GlobalLock(clipbuffer);
-			strcpy_s(buffer, 4, LPCSTR(source));
-			GlobalUnlock(clipbuffer);
-			SetClipboardData(CF_TEXT, clipbuffer);
-			CloseClipboard();
-		}*/
-
 		if (!MumbleLink->Context.IsTextboxFocused && MumbleLink->Context.MapType == Mumble::EMapType::Instance)
 		{
 			std::string cbPrevious;
@@ -506,10 +494,14 @@ void PerformSudoku()
 						HANDLE cbHandleOld = GetClipboardData(CF_TEXT);
 						if (cbHandleOld)
 						{
-							cbPrevious = (char*)GlobalLock(cbHandleOld);
-							lenPrevious = cbPrevious.size() + 1;
+							LPVOID memLockOld = GlobalLock(cbHandleOld);
+							if (memLockOld)
+							{
+								cbPrevious = (char*)memLockOld;
+								lenPrevious = cbPrevious.size() + 1;
+								GlobalUnlock(cbHandleOld);
+							}
 						}
-						GlobalUnlock(cbHandleOld);
 						EmptyClipboard();
 						SetClipboardData(CF_TEXT, hMem);
 						CloseClipboard();
@@ -569,8 +561,6 @@ void PerformSudoku()
 				}
 			}
 
-			APIDefs->Log(ELogLevel_DEBUG, "wtf", std::to_string(wait).c_str());
-
 			/* continue loop */
 			if (wait < 50)
 			{
@@ -589,15 +579,6 @@ void PerformSudoku()
 				/* return stroke  */
 				SendInput(ARRAYSIZE(retPress), retPress, sizeof(INPUT));
 				SendInput(ARRAYSIZE(retRelease), retRelease, sizeof(INPUT));
-
-				/*Sleep(15);
-				for (int i = 0; i < strlen(source); i++)
-				{
-					PostMessage(Game, WM_CHAR, (WPARAM)source[i], 0); Sleep(15);
-				}*/
-
-				//PostMessage(Game, WM_KEYDOWN, VK_RETURN, GetLPARAM(VK_RETURN, 1, 0));
-				//PostMessage(Game, WM_KEYUP, VK_RETURN, GetLPARAM(VK_RETURN, 0, 0));
 			}
 
 			if (!cbPrevious.empty())
