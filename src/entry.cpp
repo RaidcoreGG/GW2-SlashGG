@@ -210,6 +210,7 @@ std::mutex Mutex;
 
 bool IsSlashGGButtonVisible = true;
 bool IsSlashGGButtonHovered = false;
+bool RestoreClipboard = true;
 Texture* Button = nullptr;
 Texture* ButtonHover = nullptr;
 
@@ -456,6 +457,17 @@ void AddonOptions()
 		SaveSettings(SettingsPath);
 	}
 
+	if (ImGui::Checkbox("Restore Clipboard##BTN_SUDOKU_RESTORE", &RestoreClipboard))
+	{
+		SaveSettings(SettingsPath);
+	}
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::BeginTooltip();
+		ImGui::Text("Resets the clipboard to its previous content after pasting /gg.");
+		ImGui::EndTooltip();
+	}
+
 	ImGui::Text("The GG button will only show in instances e.g. Fractals, Raids, Strikes.");
 	ImGui::Text("You can right-click the GG button to edit its position or enable the editing mode from here.");
 	ImGui::Checkbox("Edit Mode##BTN_SUDOKU_EDIT", &isEditingPosition);
@@ -581,35 +593,38 @@ void PerformSudoku()
 				SendInput(ARRAYSIZE(retRelease), retRelease, sizeof(INPUT));
 			}
 
-			wait = 0; /* wait for x ms */
-			int delay = 50; /* wait at least 50 ms initially. */
-			do
+			if (RestoreClipboard)
 			{
-				Sleep(delay);
-				delay = 1;
-				wait++;
-
-				if (wait >= 250)
+				wait = 0; /* wait for x ms */
+				int delay = 50; /* wait at least 50 ms initially. */
+				do
 				{
-					break;
-				}
-			} while (MumbleLink->Context.IsTextboxFocused);
+					Sleep(delay);
+					delay = 1;
+					wait++;
 
-			if (!cbPrevious.empty())
-			{
-				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, lenPrevious);
-				if (hMem)
-				{
-					LPVOID memLock = GlobalLock(hMem);
-					if (memLock)
+					if (wait >= 250)
 					{
-						memcpy(memLock, cbPrevious.c_str(), lenPrevious - 1);
-						GlobalUnlock(hMem);
-						if (OpenClipboard(Game))
+						break;
+					}
+				} while (MumbleLink->Context.IsTextboxFocused);
+
+				if (!cbPrevious.empty())
+				{
+					HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, lenPrevious);
+					if (hMem)
+					{
+						LPVOID memLock = GlobalLock(hMem);
+						if (memLock)
 						{
-							EmptyClipboard();
-							SetClipboardData(CF_TEXT, hMem);
-							CloseClipboard();
+							memcpy(memLock, cbPrevious.c_str(), lenPrevious - 1);
+							GlobalUnlock(hMem);
+							if (OpenClipboard(Game))
+							{
+								EmptyClipboard();
+								SetClipboardData(CF_TEXT, hMem);
+								CloseClipboard();
+							}
 						}
 					}
 				}
@@ -646,11 +661,13 @@ void LoadSettings(std::filesystem::path aPath)
 	if (!Settings.is_null())
 	{
 		if (!Settings["IsVisible"].is_null()) { Settings["IsVisible"].get_to(IsSlashGGButtonVisible); }
+		if (!Settings["RestoreClipboard"].is_null()) { Settings["RestoreClipboard"].get_to(RestoreClipboard); }
 	}
 }
 void SaveSettings(std::filesystem::path aPath)
 {
 	Settings["IsVisible"] = IsSlashGGButtonVisible;
+	Settings["RestoreClipboard"] = RestoreClipboard;
 
 	Mutex.lock();
 	{
