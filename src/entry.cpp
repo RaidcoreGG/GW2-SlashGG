@@ -581,6 +581,20 @@ void PerformSudoku()
 				SendInput(ARRAYSIZE(retRelease), retRelease, sizeof(INPUT));
 			}
 
+			wait = 0; /* wait for x ms */
+			int delay = 50; /* wait at least 50 ms initially. */
+			do
+			{
+				Sleep(delay);
+				delay = 1;
+				wait++;
+
+				if (wait >= 250)
+				{
+					break;
+				}
+			} while (MumbleLink->Context.IsTextboxFocused);
+
 			if (!cbPrevious.empty())
 			{
 				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, lenPrevious);
