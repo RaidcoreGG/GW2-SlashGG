@@ -102,6 +102,7 @@ CALL $(SolutionDir)Scripts\version.bat</Command>
     <ClInclude Include="src\imgui\imstb_rectpack.h" />
     <ClInclude Include="src\imgui\imstb_textedit.h" />
     <ClInclude Include="src\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\ImPos\imgui_positioning.h" />
     <ClInclude Include="src\Mumble\Mumble.h" />
     <ClInclude Include="src\Nexus\Nexus.h" />
     <ClInclude Include="src\nlohmann\json.hpp" />

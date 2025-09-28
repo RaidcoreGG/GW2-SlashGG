@@ -3,9 +3,10 @@
 #include <mutex>
 #include <string>
 
-#include "nexus/Nexus.h"
-#include "mumble/Mumble.h"
 #include "imgui/imgui.h"
+#include "ImPos/imgui_positioning.h"
+#include "mumble/Mumble.h"
+#include "nexus/Nexus.h"
 
 #include "Remote.h"
 #include "Version.h"
@@ -188,7 +189,6 @@ LPARAM GetLPARAM(uint32_t key, bool down, bool sys)
 void AddonLoad(AddonAPI* aApi);
 void AddonUnload();
 void ProcessKeybind(const char* aIdentifier);
-UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void AddonRender();
 void AddonOptions();
 void PerformSudoku();
@@ -218,11 +218,6 @@ std::mutex GGMutex;
 std::thread GGThread;
 bool IsGGThreadRunning = false;
 bool DoGG = false;
-
-bool isEditingPosition = false;
-
-Keybind CurrentKeybind{};
-bool isSettingKeybind = false;
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
@@ -270,8 +265,6 @@ void AddonLoad(AddonAPI* aApi)
 	APIDefs->RegisterRender(ERenderType_Render, AddonRender);
 	APIDefs->RegisterRender(ERenderType_OptionsRender, AddonOptions);
 
-	APIDefs->RegisterWndProc(AddonWndProc); // lazy way to get game handle
-
 	for (long long i = 0; i < 255; i++)
 	{
 		KeyLParam key{};
@@ -307,8 +300,6 @@ void AddonLoad(AddonAPI* aApi)
 }
 void AddonUnload()
 {
-	APIDefs->DeregisterWndProc(AddonWndProc);
-
 	APIDefs->DeregisterRender(AddonOptions);
 	APIDefs->DeregisterRender(AddonRender);
 
@@ -330,79 +321,14 @@ void ProcessKeybind(const char* aIdentifier)
 	}
 }
 
-UINT AddonWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	Game = hWnd;
-
-	if (WM_KEYDOWN == uMsg || WM_SYSKEYDOWN == uMsg)
-	{
-		KeyLParam keylp = LParamToKMF(lParam);
-
-		Keybind kb{};
-		kb.Alt = GetKeyState(VK_MENU) & 0x8000;
-		kb.Ctrl = GetKeyState(VK_CONTROL) & 0x8000;
-		kb.Shift = GetKeyState(VK_SHIFT) & 0x8000;
-		kb.Key = keylp.GetScanCode();
-
-		// if shift, ctrl or alt set key to 0
-		if (wParam == 16 || wParam == 17 || wParam == 18)
-		{
-			kb.Key = 0;
-			if (wParam == 16) { kb.Shift = true; }
-			if (wParam == 17) { kb.Ctrl = true; }
-			if (wParam == 18) { kb.Alt = true; }
-		}
-
-		if (isSettingKeybind)
-		{
-			CurrentKeybind = kb;
-		}
-	}
-	else if (WM_KEYUP == uMsg || WM_SYSKEYUP == uMsg)
-	{
-		KeyLParam keylp = LParamToKMF(lParam);
-
-		Keybind kb{};
-		kb.Alt = GetKeyState(VK_MENU) & 0x8000;
-		kb.Ctrl = GetKeyState(VK_CONTROL) & 0x8000;
-		kb.Shift = GetKeyState(VK_SHIFT) & 0x8000;
-		kb.Key = keylp.GetScanCode();
-
-		// if shift, ctrl or alt set key to 0
-		if (wParam == 16 || wParam == 17 || wParam == 18)
-		{
-			kb.Key = 0;
-			if (wParam == 16) { kb.Shift = true; }
-			if (wParam == 17) { kb.Ctrl = true; }
-			if (wParam == 18) { kb.Alt = true; }
-		}
-	}
-
-	if (isSettingKeybind && (uMsg == WM_SYSKEYDOWN || uMsg == WM_KEYDOWN || uMsg == WM_SYSKEYUP || uMsg == WM_KEYUP))
-	{
-		return 0;
-	}
-
-	return uMsg;
-}
-
 void AddonRender()
 {
-	if (!NexusLink || !NexusLink->IsGameplay || !MumbleLink || MumbleLink->Context.IsMapOpen || !IsSlashGGButtonVisible || (MumbleLink->Context.MapType != Mumble::EMapType::Instance && !isEditingPosition))
+	if (!NexusLink || !NexusLink->IsGameplay || !MumbleLink || MumbleLink->Context.IsMapOpen || !IsSlashGGButtonVisible || (MumbleLink->Context.MapType != Mumble::EMapType::Instance))
 	{
 		return;
 	}
 
-	bool wasEditingPosition = isEditingPosition;
-
-	if (wasEditingPosition)
-	{
-		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1.0f, 0.0f, 0.0f, 0.5f));
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2.0f);
-	}
-
-	if (ImGui::Begin("Sudoku!", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | (isEditingPosition ? 0 : ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground)))
+	if (ImGui::Begin("Sudoku!", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground | ImGuiExt::UpdatePosition("Sudoku!")))
 	{
 		if (!Button || !ButtonHover)
 		{
@@ -417,38 +343,18 @@ void AddonRender()
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0.f, 0.f });
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.f, 0.f });
 
-			if (wasEditingPosition)
-			{
-				ImGui::Image(IsSlashGGButtonHovered ? ButtonHover->Resource : Button->Resource, ImVec2(40.0f * NexusLink->Scaling, 40.0f * NexusLink->Scaling));
-			}
-			else if (ImGui::ImageButton(IsSlashGGButtonHovered ? ButtonHover->Resource : Button->Resource, ImVec2(40.0f * NexusLink->Scaling, 40.0f * NexusLink->Scaling)))
+			if (ImGui::ImageButton(IsSlashGGButtonHovered ? ButtonHover->Resource : Button->Resource, ImVec2(40.0f * NexusLink->Scaling, 40.0f * NexusLink->Scaling)))
 			{
 				DoGG = true;
 			}
 			IsSlashGGButtonHovered = ImGui::IsItemHovered();
 			ImGui::PopStyleColor(3);
 			ImGui::PopStyleVar(2);
-
-			if (ImGui::BeginPopupContextItem("SlashGGCtxMenu"))
-			{
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0.f, 0.f }); // smol checkbox
-				
-				ImGui::Checkbox("Edit Position", &isEditingPosition);
-
-				ImGui::PopStyleVar();
-
-				ImGui::EndPopup();
-			}
-			ImGui::OpenPopupOnItemClick("SlashGGCtxMenu", 1);
 		}
 	}
-	ImGui::End();
+	ImGuiExt::ContextMenuPosition("SlashGGCtxMenu");
 
-	if (wasEditingPosition)
-	{
-		ImGui::PopStyleColor(2);
-		ImGui::PopStyleVar();
-	}
+	ImGui::End();
 }
 void AddonOptions()
 {
@@ -469,8 +375,7 @@ void AddonOptions()
 	}
 
 	ImGui::Text("The GG button will only show in instances e.g. Fractals, Raids, Strikes.");
-	ImGui::Text("You can right-click the GG button to edit its position or enable the editing mode from here.");
-	ImGui::Checkbox("Edit Mode##BTN_SUDOKU_EDIT", &isEditingPosition);
+	ImGui::Text("You can right-click the GG button to edit its position.");
 }
 
 void PerformSudoku()
